@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Lendário Dash Edition</title>
+    <style>
+        :root { --accent: #00f2ff; --gold: #ffd700; --bg: #0a0a0c; --red: #ff0044; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Arial Black', sans-serif; user-select: none; }
+        body { background: var(--bg); color: white; height: 100vh; display: flex; justify-content: center; align-items: center; overflow: hidden; }
+        
+        #rotate-warning {
+            position: fixed; inset: 0; background: #000; z-index: 9999;
+            display: none; flex-direction: column; justify-content: center; align-items: center; text-align: center;
+        }
+        @media screen and (orientation: portrait) { #rotate-warning { display: flex; } }
+
+        #game-container { 
+            position: relative; width: 100%; max-width: 850px; aspect-ratio: 2 / 1; 
+            background: #000; border: 4px solid var(--accent); box-shadow: 0 0 20px var(--accent); 
+            overflow: hidden; border-radius: 15px; transition: border-color 0.1s;
+        }
+
+        canvas { width: 100%; height: 100%; display: block; }
+        
+        #jump-btn {
+            position: absolute; bottom: 20px; right: 20px; width: 80px; height: 80px;
+            background: rgba(255, 255, 255, 0.05); border: 3px solid var(--accent);
+            border-radius: 50%; display: flex; justify-content: center; align-items: center;
+            z-index: 50; box-shadow: 0 0 15px var(--accent); backdrop-filter: blur(5px);
+            cursor: pointer; transition: 0.1s; touch-action: manipulation;
+        }
+
+        .hud { position: absolute; top: 15px; left: 15px; z-index: 10; display: flex; gap: 10px; }
+        .badge { background: rgba(0,0,0,0.7); padding: 8px 15px; border-radius: 50px; border: 2px solid var(--accent); font-size: 12px; }
+        
+        .overlay { position: absolute; inset: 0; z-index: 100; background: rgba(0,0,0,0.9); backdrop-filter: blur(10px); display: flex; flex-direction: column; justify-content: center; align-items: center; }
+        .panel { background: rgba(255,255,255,0.05); padding: 30px; border-radius: 25px; border: 1px solid rgba(255,255,255,0.1); text-align: center; width: 90%; max-width: 600px; }
+        
+        .btn { padding: 15px 30px; border: none; border-radius: 15px; font-weight: 900; cursor: pointer; text-transform: uppercase; margin: 10px; transition: 0.2s; font-size: 14px; }
+        .btn-play { background: var(--accent); color: #000; width: 250px; box-shadow: 0 0 20px var(--accent); }
+        .btn-menu { background: #222; color: #fff; width: 180px; border: 3px solid transparent; transition: 0.3s; }
+        
+        .btn-quality { width: 110px; border: 2px solid #444 !important; opacity: 0.6; }
+        .btn-quality.selected { border-color: var(--accent) !important; box-shadow: 0 0 15px var(--accent); opacity: 1; transform: scale(1.05); }
+
+        .code-section { margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 15px; }
+        .code-input { background: rgba(0,0,0,0.5); border: 2px solid var(--accent); padding: 10px; border-radius: 10px; color: white; text-align: center; width: 200px; font-family: sans-serif; outline: none; margin-bottom: 10px; }
+        .btn-code { background: var(--accent); color: #000; padding: 10px 15px; border-radius: 10px; border: none; font-weight: 900; cursor: pointer; }
+
+        .shop-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 10px; margin: 15px 0; max-height: 200px; overflow-y: auto; padding: 10px; }
+        .skin-card { background: rgba(255,255,255,0.05); padding: 10px; border-radius: 12px; border: 2px solid transparent; }
+        .skin-card.active { border-color: var(--accent); background: rgba(0,242,255,0.1); }
+        .btn-shop { width: 100%; padding: 5px; border-radius: 8px; border: none; font-size: 10px; font-weight: 900; cursor: pointer; margin-top: 5px; }
+
+        .hidden { display: none !important; }
+
+        .version-text { font-size: 12px; color: rgba(255,255,255,0.5); margin-top: 5px; }
+        .update-text { color: var(--gold); font-size: 18px; letter-spacing: 2px; margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+
+    <div id="rotate-warning">
+        <h1 style="color: var(--accent);">Vire seu celular para jogar 📱</h1>
+    </div>
+
+    <div id="game-container">
+        <div class="hud">
+            <div class="badge">SCORE: <span id="score">0</span></div>
+            <div class="badge" style="color:var(--gold)">💰 <span id="coins-hud">0</span></div>
+        </div>
+
+        <div id="jump-btn">
+            <svg viewBox="0 0 24 24" width="40"><path d="M12 2.5v4.2c-2.3,0.5-4.1,2.5-4.1,4.9v4.2c0,0.3,0.2,0.5,0.5,0.5h8.2c0.3,0,0.5-0.2,0.5-0.5v-4.2c0-2.4-1.8-4.4-4.1-4.9V3C12.5,2.7,12.3,2.5,12,2.5z"/></svg>
+        </div>
+
+        <div id="main-menu" class="overlay">
+            <div class="panel">
+                <h1 style="color:var(--accent); font-size: 2.5rem; margin-bottom: 0;">LENDÁRIO DASH EDITION</h1>
+                <div class="update-text">REMIX UPDATE</div>
+                <div class="version-text">v10.1</div>
+                
+                <button class="btn btn-play" style="margin-top: 15px;" onclick="startGame()">JOGAR</button><br>
+                <button class="btn btn-menu" onclick="abrirMenu('shop-menu')">LOJA DE SKINS</button><br>
+                <button class="btn btn-menu" onclick="abrirMenu('config-menu')">CONFIGURAÇÕES</button>
+            </div>
+        </div>
+
+        <div id="config-menu" class="overlay hidden">
+            <div class="panel">
+                <h2>QUALIDADE</h2>
+                <div style="display: flex; gap: 10px; justify-content: center; margin-top: 15px;">
+                    <button id="q-low" class="btn btn-menu btn-quality" onclick="setQuality('low')">BAIXO</button>
+                    <button id="q-mid" class="btn btn-menu btn-quality" onclick="setQuality('mid')">MÉDIO</button>
+                    <button id="q-pro" class="btn btn-menu btn-quality selected" onclick="setQuality('pro')">PRO</button>
+                </div>
+
+                <div class="code-section">
+                    <h3 style="color:var(--accent); font-size: 14px; margin-bottom: 8px;">LENDÁRIO CODES</h3>
+                    <input type="text" id="code-input" class="code-input" placeholder="DIGITE O CÓDIGO">
+                    <button class="btn-code" onclick="redeemCode()">RESGATAR</button>
+                    <div id="code-msg" style="font-size: 11px; margin-top: 8px; height: 12px; font-weight: bold;"></div>
+                </div>
+
+                <button class="btn btn-play" style="margin-top: 20px;" onclick="abrirMenu('main-menu')">VOLTAR</button>
+            </div>
+        </div>
+
+        <div id="shop-menu" class="overlay hidden">
+            <div class="panel" style="max-width: 700px;">
+                <h2 style="color: var(--gold)">MERCADO DE SKINS</h2>
+                <div class="shop-grid" id="shop-items"></div>
+                <button class="btn btn-play" onclick="abrirMenu('main-menu')">VOLTAR</button>
+            </div>
+        </div>
+
+        <div id="death-menu" class="overlay hidden">
+            <div class="panel">
+                <h1 style="color: var(--red); font-size: 3rem;">FIM DE JOGO</h1>
+                <p style="font-size: 1.5rem; margin: 10px 0;">SCORE: <span id="final-score">0</span></p>
+                <button class="btn btn-play" onclick="startGame()">TENTAR DE NOVO</button><br>
+                <button class="btn btn-menu" onclick="abrirMenu('main-menu')">MENU</button>
+            </div>
+        </div>
+
+        <canvas id="canvas" width="800" height="400"></canvas>
+    </div>
+
+<script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const gameContainer = document.getElementById('game-container');
+    const jumpBtn = document.getElementById('jump-btn');
+    
+    const gameMusic = new Audio("https://files.catbox.moe/fcj3pc.mp3");
+    gameMusic.loop = true;
+    let musicStarted = false;
+
+    let coins = parseInt(localStorage.getItem('L91_Coins')) || 0;
+    let owned = JSON.parse(localStorage.getItem('L91_Owned')) || [0];
+    let activeId = parseInt(localStorage.getItem('L91_Active')) || 0;
+    let usedCodes = JSON.parse(localStorage.getItem('L91_UsedCodes')) || [];
+
+    const SKINS = [
+        { id: 0, name: "Padrão", color: "#00f2ff", price: 0 },
+        { id: 1, name: "LED CHROMA", color: "chroma", price: 150 },
+        { id: 2, name: "Galaxy X", color: "#cc00ff", price: 80 },   
+        { id: 3, name: "Ouro Puro", color: "#ffd700", price: 120 }
+    ];
+
+    const randomPrices = [14, 20, 30, 50];
+    for(let i=4; i<30; i++) {
+        let p = randomPrices[Math.floor(Math.random() * randomPrices.length)];
+        SKINS.push({ id: i, name: `Skin ${i+1}`, color: `hsl(${i*12}, 75%, 50%)`, price: p });
+    }
+
+    function abrirMenu(id) {
+        document.querySelectorAll('.overlay').forEach(o => o.classList.add('hidden'));
+        if(id !== 'none' && document.getElementById(id)) document.getElementById(id).classList.remove('hidden');
+        if(id === 'shop-menu') renderShop();
+    }
+
+    function setQuality(q) {
+        document.querySelectorAll('.btn-quality').forEach(btn => btn.classList.remove('selected'));
+        document.getElementById('q-' + q).classList.add('selected');
+    }
+
+    function redeemCode() {
+        const input = document.getElementById('code-input').value.trim();
+        const msg = document.getElementById('code-msg');
+        if (input === "Lendário10k") {
+            if (usedCodes.includes("Lendário10k")) { 
+                msg.innerText = "CÓDIGO JÁ USADO!"; msg.style.color = "orange"; 
+            } else { 
+                coins += 1000;
+                usedCodes.push("Lendário10k"); 
+                sync(); 
+                msg.innerText = "SUCESSO! +1000 MOEDAS!"; msg.style.color = "#00ff00"; 
+            }
+        } else { 
+            msg.innerText = "CÓDIGO INVÁLIDO!"; msg.style.color = "red"; 
+        }
+        setTimeout(() => { msg.innerText = ""; }, 3000);
+    }
+
+    function renderShop() { 
+        const grid = document.getElementById('shop-items'); grid.innerHTML = ''; 
+        SKINS.forEach(s => { 
+            const isOwned = owned.includes(s.id); const isActive = activeId === s.id;
+            const card = document.createElement('div'); card.className = `skin-card ${isActive ? 'active' : ''}`; 
+            let btnHtml = !isOwned ? `<button class="btn-shop" style="background:#ffd700" onclick="buySkin(${s.id})">${s.price} 💰</button>` : 
+                          (!isActive ? `<button class="btn-shop" style="background:#00f2ff" onclick="useSkin(${s.id})">USAR</button>` : `<button class="btn-shop" disabled>USANDO</button>`); 
+            card.innerHTML = `<div style="width:30px; height:30px; background:${s.color==='chroma'?'linear-gradient(45deg,red,blue)':s.color}; margin:auto; border-radius:5px; border:1px solid #fff;"></div><div style="font-size:9px; margin-top:5px">${s.name}</div>${btnHtml}`; 
+            grid.appendChild(card); 
+        }); 
+    }
+
+    function buySkin(id) { 
+        const s = SKINS.find(x => x.id === id); 
+        if(coins >= s.price) { coins -= s.price; owned.push(id); sync(); renderShop(); } 
+    }
+    function useSkin(id) { activeId = id; sync(); renderShop(); }
+
+    function sync() { 
+        localStorage.setItem('L91_Coins', coins); 
+        localStorage.setItem('L91_Owned', JSON.stringify(owned));
+        localStorage.setItem('L91_Active', activeId);
+        localStorage.setItem('L91_UsedCodes', JSON.stringify(usedCodes));
+        document.getElementById('coins-hud').innerText = coins;
+    }
+
+    function updateHyperColors() {
+        const s = SKINS.find(x => x.id === activeId);
+        let color = (s.color === 'chroma') ? `hsl(${(Date.now()/10)%360}, 100%, 50%)` : s.color;
+        gameContainer.style.borderColor = color;
+        gameContainer.style.boxShadow = `0 0 20px ${color}`;
+        jumpBtn.style.borderColor = color;
+        jumpBtn.querySelector('svg').style.fill = color;
+        requestAnimationFrame(updateHyperColors);
+    }
+
+    let gameActive = false, score = 0, lastSpawn = 0, obstacles = [], gameCoins = [];
+    let player = { x: 120, y: 315, w: 35, h: 35, dy: 0, rot: 0, gravity: 0.60 };
+
+    function startGame() { 
+        if(!musicStarted) { gameMusic.play().catch(() => {}); musicStarted = true; }
+        score = 0; obstacles = []; gameCoins = []; player.y = 315; player.dy = 0;
+        document.getElementById('score').innerText = "0";
+        abrirMenu('none');
+        gameActive = true; sync(); requestAnimationFrame(update); 
+    }
+
+    function update() {
+        if (!gameActive) return;
+        requestAnimationFrame(update);
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        const s = SKINS.find(x => x.id === activeId);
+        let pColor = (s.color === 'chroma') ? `hsl(${(Date.now()/10)%360}, 100%, 50%)` : s.color;
+
+        ctx.strokeStyle = pColor; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(0, 350); ctx.lineTo(canvas.width, 350); ctx.stroke();
+
+        if (Date.now() - lastSpawn > 1600) {
+            obstacles.push({ x: canvas.width, w: 35, h: 40 }); 
+            // SPAMAR 3 MOEDAS EM FILA NO CHÃO
+            for(let i=0; i<3; i++) {
+                gameCoins.push({ x: canvas.width + 200 + (i * 40), y: 335, collected: false });
+            }
+            lastSpawn = Date.now();
+        }
+
+        player.dy += player.gravity; player.y += player.dy;
+        
+        if (player.y >= 315) { 
+            player.y = 315; 
+            player.dy = 0; 
+            player.rot = 0; 
+        } else { 
+            player.rot += 0.12; 
+        }
+        
+        ctx.save(); ctx.translate(player.x + 17.5, player.y + 17.5); ctx.rotate(player.rot); ctx.fillStyle = pColor;
+        ctx.fillRect(-17.5, -17.5, 35, 35); ctx.restore();
+
+        gameCoins.forEach((m, index) => {
+            m.x -= 6;
+            if(!m.collected) {
+                ctx.fillStyle = "#ffd700"; ctx.beginPath(); ctx.arc(m.x, m.y, 8, 0, Math.PI*2); ctx.fill();
+                if(player.x < m.x + 15 && player.x + 35 > m.x - 15 && player.y < m.y + 15 && player.y + 35 > m.y - 15) { 
+                    m.collected = true; coins++; sync(); 
+                }
+            }
+            if(m.x < -20) gameCoins.splice(index, 1);
+        });
+
+        obstacles.forEach((o, i) => {
+            o.x -= 6;
+            ctx.fillStyle = "#ff0044"; 
+            ctx.beginPath(); ctx.moveTo(o.x, 350); ctx.lineTo(o.x + 17.5, 350 - o.h); ctx.lineTo(o.x + 35, 350); ctx.fill();
+            if(player.x + 25 > o.x && player.x + 10 < o.x + 35 && player.y + 28 > 350 - o.h) {
+                gameActive = false; document.getElementById('final-score').innerText = score; abrirMenu('death-menu');
+            }
+            if(o.x < -40) { obstacles.splice(i, 1); score++; document.getElementById('score').innerText = score; }
+        });
+    }
+
+    const jump = (e) => { 
+        if(e) e.preventDefault(); 
+        if(gameActive && player.y >= 310) { 
+            player.dy = -10.5; 
+        } 
+    };
+    
+    window.addEventListener('keydown', (e) => { if(e.code === 'Space') jump(); });
+    jumpBtn.addEventListener('touchstart', jump); 
+    jumpBtn.addEventListener('mousedown', jump);
+    
+    sync();
+    updateHyperColors();
+</script>
+</body>
+</html>
